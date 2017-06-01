@@ -1,4 +1,6 @@
 
+//To do:
+	//Make the survival chances parameters
 public class Tower extends Sector{
 	public Tower(int ally, int enemy) {
 		super(ally, enemy, 0.6, 0.4);

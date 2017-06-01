@@ -1,4 +1,10 @@
 
+//To do:
+	//Make the survival chances parameters
+	//Improve algorithm for determining if enemies vs allies
+		//can bleed through
+		//make proportions parameters
+
 public class Front extends Sector{
 	private int initialForces;
 	public Front(int ally, int enemy) {

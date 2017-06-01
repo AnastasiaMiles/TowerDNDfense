@@ -13,6 +13,20 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 
+//To do:
+	//Make gui more flexible rather than relying on presupposed
+		//numbers (ex 8 inner sectors)
+//Potential long-term improvement:
+	//Make a visual display of the map which shows the sectors
+		//Each sector is populated with red dots (enemies)
+		//and green dots (friendly troops)
+		//which each originally begin on opposite sides of the sector
+		//over time they mingle and the proportion of red vs
+		//green changes based on the numbers of enemies vs friendlies
+		//in the sector
+	//Hard part with this may be arranging sectors if the 
+		//number of inners/outers varies with input
+
 public class BattleGui {	
 	private final JFrame frame;
 	

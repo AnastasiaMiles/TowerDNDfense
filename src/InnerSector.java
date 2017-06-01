@@ -1,4 +1,11 @@
 
+
+//To do:
+	//Make the survival chances parameters
+	//Improve algorithm for determining if enemies vs allies
+		//can bleed through
+		//make proportions parameters
+
 public class InnerSector extends Sector{
 	public InnerSector(int ally, int enemy) {
 		super(ally, enemy, 0.6, 0.4);

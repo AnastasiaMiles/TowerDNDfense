@@ -1,28 +1,47 @@
 import java.lang.Math;
 
+//To do:
+	//Improve migration algorithm (move random numbers, fix timing)
+	//Improve reinforcement timing (make more random), numbers, and movement
+	//Fix a number of functions that use exactly 8 inner and 4 outer
+		//sectors so that this can be more flexible
+	//Incorporate a function to make backup troops accessible
+	//Incorporate a function to make front accessible
+	//Make the survival chance for each sector flexible / input based
+	//Improve advantage system to be more diverse than just increasing
+		//survival chance by .1
+	//Incorporate option to make the battle last approx for an input
+		//amount of time: ie have tower fall ~45 min, have battle end ~1hr
+		//while maintaining seemingly random encounters/fights/deaths
+	//Improve algorithms to determine whether enemy or friendly
+		//Controls a sector / can bleed through it
+	//Incorporate consequences of controlling / losing sectors
+	//Incorporate the option to not make the battle one-sided
+		//ie don't make Darkspawn have an infinite number
+		//Make this an actual realistic battle simulator where
+		//the outcome depends on strategy and skill
+
 public class BattleField {
 	private InnerSector[] innerSectors;
 	private OuterSector[] outerSectors;
 	private Tower tower;
 	private Front front;
-	private double towerHealth;
+	private double towerHealth = 100;
 	private int frontTroops;
 	private int freeTroops;
-	private int totalTroops;
-	private int loghainTroops;
+	private int controlledTroops;
+	private int backupTroops;
 	
-	public BattleField() {
-		frontTroops = 20000;
-		freeTroops = 20000;
-		totalTroops = 20000;
-		loghainTroops = 50000;
-		innerSectors = new InnerSector[8];
+	public BattleField(int frontNum, int controlledNum, int backupNum, int outerNum) {
+		frontTroops = frontNum;
+		freeTroops = controlledTroops = controlledNum;
+		backupTroops = backupNum;
+		innerSectors = new InnerSector[outerNum*2];
 		initializeInners();
-		outerSectors = new OuterSector[4];
+		outerSectors = new OuterSector[outerNum];
 		initializeOuters();
 		front = new Front(frontTroops, 25000);
 		tower = new Tower(0, 0);
-		towerHealth = 100;
 	}
 	
 	private void initializeInners() {
@@ -38,10 +57,7 @@ public class BattleField {
 	}
 	
 	public boolean towerHasFallen() {
-		if(towerHealth <= 0) {
-			return true;
-		}
-		return false;
+		return towerHealth <= 0;
 	}
 	
 	public int getFrontNumbers() {
@@ -49,15 +65,15 @@ public class BattleField {
 	}
 	
 	public int getTroopNumbers() {
-		return totalTroops;
+		return controlledTroops;
 	}
 	
 	public int getFreeNumbers() {
 		return freeTroops;
 	}
 	
-	public int getLoghainNumbers() {
-		return loghainTroops;
+	public int getBackupNumbers() {
+		return backupTroops;
 	}
 	
 	public double towerHealth() {
@@ -108,6 +124,10 @@ public class BattleField {
 		s.removeAllyAdvantage(.1);
 	}
 	
+	public void enemyReinforce(int enemy) {
+		front.addEnemy(enemy);
+	}
+	
 	public void update() {
 		if(tower.enemyProportion() >= 0.5) {
 			towerHealth -= 0.25;
@@ -141,7 +161,7 @@ public class BattleField {
 			}
 		}
 		migrate();
-		totalTroops = tempTotalTroops + freeTroops;
+		controlledTroops = tempTotalTroops + freeTroops;
 	}
 	
 	public void migrate() {
@@ -151,12 +171,78 @@ public class BattleField {
 		}
 	}
 	
-	public void enemyReinforce(int enemy) {
-		front.addEnemy(enemy);
-		//int remainingEnemies = reinforceFront(enemy);
-		//propagate(remainingEnemies);	
+	private void migrateFront() {
+		if(front.enemyProportion() >= 0.6) {
+			int frontNum = front.getEnemyNumbers();
+			int numPerSection = frontNum / 500;
+			for(int i = 0; i < 10; i++) {
+				double move = Math.random();
+				if(move >= 0.6) {
+					front.removeEnemy(numPerSection);
+				}
+				else {
+					return;
+				}
+				if(move >= 0.6 && move < 0.7) {
+					outerSectors[0].addEnemy(numPerSection);
+				}
+				else if(move >= 0.7 && move < 0.8) {
+					outerSectors[1].addEnemy(numPerSection);
+				}
+				else if(move >= 0.8 && move < 0.9) {
+					outerSectors[2].addEnemy(numPerSection);
+				}
+				else if(move >= 0.9 && move < 1) {
+					outerSectors[3].addEnemy(numPerSection);
+				}
+			}
+		}
 	}
 	
+	private void migrateFurther(OuterSector outer) {
+		int numPerSection;
+		if(outer.enemyProportion() >= 0.7) {
+			int outerNum = outer.getEnemyNumbers();
+			numPerSection = outerNum / 250;
+			for(int i = 0; i < 20; i++) {
+				double move = Math.random();
+				if(move >= 0.7) {
+					outer.removeEnemy(numPerSection);
+					if(move >= 0.7 && move < 0.85) {
+						outer.one().addEnemy(numPerSection);
+					} else {
+						outer.two().addEnemy(numPerSection);
+					}
+				}
+			}
+		}
+		
+		if(outer.one().enemyProportion() >= 0.8 && outer.two().enemyProportion() >= 0.8) {
+			int innerOneNum = outer.one().getEnemyNumbers(); 
+			numPerSection = innerOneNum / 100;
+			for(int i = 0; i < 20; i++) {
+				double move = Math.random();
+				if(move >= 0.8) {
+					outer.one().removeEnemy(numPerSection);
+					tower.addEnemy(numPerSection);
+				}
+			}
+			int innerTwoNum = outer.two().getEnemyNumbers(); 
+			numPerSection = innerTwoNum / 100;
+			for(int i = 0; i < 20; i++) {
+				double move = Math.random();
+				if(move >= 0.8) {
+					outer.two().removeEnemy(numPerSection);
+					tower.addEnemy(numPerSection);
+				}
+			}
+		}
+	}
+	
+	
+	/* The following are temporarily disabled functions for
+	 * migrating income enemy reinforcements.
+	 
 	private void propagate(int remainingEnemies) {
 		int temp;
 		if(remainingEnemies > 0) {
@@ -227,101 +313,5 @@ public class BattleField {
 			}
 		}
 	}
-	
-	private void migrateFront() {
-		if(front.enemyProportion() >= 0.6) {
-			int frontNum = front.getEnemyNumbers(); // - (front.getEnemyNumbers() % 20);
-			int numPerSection = frontNum / 500;
-			for(int i = 0; i < 10; i++) {
-				double move = Math.random();
-				if(move >= 0.6) {
-					front.removeEnemy(numPerSection);
-				}
-				else {
-					return;
-				}
-				if(move >= 0.6 && move < 0.7) {
-					outerSectors[0].addEnemy(numPerSection);
-				}
-				else if(move >= 0.7 && move < 0.8) {
-					outerSectors[1].addEnemy(numPerSection);
-				}
-				else if(move >= 0.8 && move < 0.9) {
-					outerSectors[2].addEnemy(numPerSection);
-				}
-				else if(move >= 0.9 && move < 1) {
-					outerSectors[3].addEnemy(numPerSection);
-				}
-			}
-		}
-	}
-	
-	private void migrateFurther(OuterSector outer) {
-		int numPerSection;
-		if(outer.enemyProportion() >= 0.7) {
-			int outerNum = outer.getEnemyNumbers(); // - (outer.getEnemyNumbers() % 20);
-			numPerSection = outerNum / 250;
-			for(int i = 0; i < 20; i++) {
-				double move = Math.random();
-				if(move >= 0.7) {
-					outer.removeEnemy(numPerSection);
-					if(move >= 0.7 && move < 0.85) {
-						outer.one().addEnemy(numPerSection);
-					} else {
-						outer.two().addEnemy(numPerSection);
-					}
-				}
-			}
-		
-		if(outer.one().enemyProportion() >= 0.8 && outer.two().enemyProportion() >= 0.8) {
-			int innerOneNum = outer.one().getEnemyNumbers(); // - (outer.one().getEnemyNumbers() % 20);
-			numPerSection = innerOneNum / 100;
-			for(int i = 0; i < 20; i++) {
-				double move = Math.random();
-				if(move >= 0.8) {
-					outer.one().removeEnemy(numPerSection);
-					tower.addEnemy(numPerSection);
-				}
-			}
-			int innerTwoNum = outer.two().getEnemyNumbers(); // - (outer.two().getEnemyNumbers() % 20);
-			numPerSection = innerTwoNum / 100;
-			for(int i = 0; i < 20; i++) {
-				double move = Math.random();
-				if(move >= 0.8) {
-					outer.two().removeEnemy(numPerSection);
-					tower.addEnemy(numPerSection);
-				}
-			}
-		}
-	}
-	/*
-	private void migrateInner(InnerSector inner) {
-		if(inner.enemyProportion() >= 0.8) {
-			int innerNum = outer.getEnemyNumbers() - (outer.getEnemyNumbers() % 20);
-			numPerSection = (int)outer.getEnemyNumbers() / 20;
-			for(int i = 0; i < 20; i++) {
-				double move = Math.random();
-				if(move >= 0.7) {
-					outer.removeEnemy(numPerSection);
-					if(move >= 0.7 && move < 0.85) {
-						outer.one().addEnemy(numPerSection);
-					} else {
-						outer.one().addEnemy(numPerSection);
-					}
-				}
-			}
-			
-			
-			int sections = (int) inner.getEnemyNumbers() / 10;
-			int numPerSection = (int)inner.getEnemyNumbers() / sections;
-			for(int i = 0; i < sections; i++) {
-				double move = Math.random();
-				if(move >= 0.7) {
-					inner.removeEnemy(numPerSection);
-					tower.addEnemy(numPerSection);
-				}
-			}
-		}
-		*/
-	}
+	*/
 }

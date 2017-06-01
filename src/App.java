@@ -1,10 +1,19 @@
 import java.util.Scanner;
 
+//To do:
+	//Improve timing proportions
+	//Make reinforcement timer more random / better suited
+		//to the battle
+
 public class App implements Runnable{
 	volatile String command = "";
+	private int sleepTime = 100;
+	private int reinforcementTime = 1800;
+	private int reinforcementMin = 1000;
+	private int reinforcementMax = 10000;
 	
 	public void run() {
-		BattleField b = new BattleField();
+		BattleField b = new BattleField(20000, 20000, 50000, 4);
 		long reinforcementTimer = System.currentTimeMillis();
 		BattleGui gui = new BattleGui();
 		while(b.getTroopNumbers() > 0) {
@@ -13,15 +22,14 @@ public class App implements Runnable{
 				command = "";
 			}
 			b.update();
-			if(System.currentTimeMillis() - reinforcementTimer > 180000) {
-				int enemy = 1000 + (int)(Math.random() * ((10000 - 3000) + 1));
+			if(System.currentTimeMillis() - reinforcementTimer > reinforcementTime) {
+				int enemy = reinforcementMin + (int)(Math.random() * ((reinforcementMax - reinforcementMin) + 1));
 				b.enemyReinforce(enemy);
 				reinforcementTimer = System.currentTimeMillis();
 			}
 			updateGui(gui, b);
 			try {
-				//Thread.sleep(10);
-				Thread.sleep(1000);
+				Thread.sleep(sleepTime);
 			} catch(InterruptedException e) {}
 		}
 	}
@@ -34,47 +42,41 @@ public class App implements Runnable{
 		Scanner s = new Scanner(System.in);
 		while(true) {
 			if(s.hasNext()) {
-				String str = s.nextLine();
-				if(str == "stop") {
-					break;
-				}
-				System.out.println(str);
-				app.command = str;
+				app.command = s.nextLine();
 			}
 		}
 	}
 	
 	private String processInput(BattleField b, String command) {
 		command = command.toLowerCase();
-		System.out.println(command);
 		String[] parts = command.split(" ");
-		Sector destination;
-		Sector source;
-		int number;
+		Sector destinationSector;
+		Sector sourceSector;
+		int numberToMove;
 		if(parts[0].compareTo("move") == 0) {
-			source = interpretSector(b, parts[1]);
-			destination = interpretSector(b, parts[2]);
-			number = Integer.parseInt(parts[3]);
-			if(source != b.getFront()) {
-				b.move(source, destination, number);
+			sourceSector = interpretSector(b, parts[1]);
+			destinationSector = interpretSector(b, parts[2]);
+			numberToMove = Integer.parseInt(parts[3]);
+			if(sourceSector != b.getFront()) {
+				b.move(sourceSector, destinationSector, numberToMove);
 				
 			}
 		} else if(parts[0].compareTo("add") == 0) {
-			destination = interpretSector(b, parts[1]);
-			number = Integer.parseInt(parts[2]);
-			if(destination != b.getFront()) {
-				b.add(destination, number);
-				System.out.println(destination.getAllyNumbers());
+			destinationSector = interpretSector(b, parts[1]);
+			numberToMove = Integer.parseInt(parts[2]);
+			if(destinationSector != b.getFront()) {
+				b.add(destinationSector, numberToMove);
+				System.out.println(destinationSector.getAllyNumbers());
 			}
 		} else if(parts[0].compareTo("abandon") == 0) {
-			destination = interpretSector(b, parts[1]);
-			if(destination != b.getFront()) {
-				b.abandon(destination);
+			destinationSector = interpretSector(b, parts[1]);
+			if(destinationSector != b.getFront()) {
+				b.abandon(destinationSector);
 			}
 		} else if(parts[0].compareTo("advantage") == 0) {
-			destination = interpretSector(b, parts[1]);
-			if(destination != b.getFront()) {
-				b.giveAdvantage(destination);
+			destinationSector = interpretSector(b, parts[1]);
+			if(destinationSector != b.getFront()) {
+				b.giveAdvantage(destinationSector);
 			}
 		}
 		return parts[0];
@@ -130,6 +132,10 @@ public class App implements Runnable{
 		gui.frontTroops(b.getFrontNumbers());
 		gui.commandTroops(b.getTroopNumbers());
 		gui.setUnassignedTroops(b.getFreeNumbers());
+		gui.setTower(b.getTower().getAllyNumbers(), b.getTower().getEnemyNumbers());
+		gui.setFront(b.getFront().getAllyNumbers(), b.getFront().getEnemyNumbers());
+		gui.setTowerFallen(b.towerHasFallen());
+		
 		Sector[] temp = b.getOuters();
 		for(int i = 0; i < temp.length; i++) {
 			gui.setOuterSector(i, temp[i].getAllyNumbers(), temp[i].getEnemyNumbers());
@@ -138,8 +144,5 @@ public class App implements Runnable{
 		for(int i = 0; i < temp.length; i++) {
 			gui.setInnerSector(i, temp[i].getAllyNumbers(), temp[i].getEnemyNumbers());
 		}
-		gui.setTower(b.getTower().getAllyNumbers(), b.getTower().getEnemyNumbers());
-		gui.setFront(b.getFront().getAllyNumbers(), b.getFront().getEnemyNumbers());
-		gui.setTowerFallen(b.towerHasFallen());
 	}
 }

@@ -1,5 +1,15 @@
 import java.lang.Math;
 
+//To do:
+	//Improve fighting algorithm
+		//more realistic or random number of deaths
+		//that responds to differences in numbers
+		//and survival chance
+		//One big issue is that if one side is vastly outnumbered
+			//the opponent will very very rarely see a death
+			//...It becomes unbalanced fast
+
+
 abstract class Sector {
 	private int enemy;
 	private int ally;
